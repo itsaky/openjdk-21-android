@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2003, 2023, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012, 2022 SAP SE. All rights reserved.
+ * Copyright (c) 2012, 2023 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,11 @@
 void InterpreterMacroAssembler::null_check_throw(Register a, int offset, Register temp_reg) {
   address exception_entry = Interpreter::throw_NullPointerException_entry();
   MacroAssembler::null_check_throw(a, offset, temp_reg, exception_entry);
+}
+
+void InterpreterMacroAssembler::load_klass_check_null_throw(Register dst, Register src, Register temp_reg) {
+  null_check_throw(src, oopDesc::klass_offset_in_bytes(), temp_reg);
+  load_klass(dst, src);
 }
 
 void InterpreterMacroAssembler::jump_to_entry(address entry, Register Rscratch) {
@@ -475,6 +480,17 @@ void InterpreterMacroAssembler::get_u4(Register Rdst, Register Rsrc, int offset,
 #endif
 }
 
+void InterpreterMacroAssembler::load_resolved_indy_entry(Register cache, Register index) {
+  // Get index out of bytecode pointer, get_cache_entry_pointer_at_bcp
+  get_cache_index_at_bcp(index, 1, sizeof(u4));
+
+  // Get address of invokedynamic array
+  ld_ptr(cache, in_bytes(ConstantPoolCache::invokedynamic_entries_offset()), R27_constPoolCache);
+  // Scale the index to be the entry index * sizeof(ResolvedInvokeDynamicInfo)
+  sldi(index, index, log2i_exact(sizeof(ResolvedIndyEntry)));
+  add(cache, cache, index);
+}
+
 // Load object from cpool->resolved_references(index).
 // Kills:
 //   - index
@@ -890,7 +906,6 @@ void InterpreterMacroAssembler::remove_activation(TosState state,
   }
 
   verify_oop(R17_tos, state);
-  verify_thread();
 
   merge_frames(/*top_frame_sp*/ R21_sender_SP, /*return_pc*/ R0, R11_scratch1, R12_scratch2);
   mtlr(R0);
@@ -917,7 +932,7 @@ void InterpreterMacroAssembler::lock_object(Register monitor, Register object) {
     //   // We stored the monitor address into the object's mark word.
     // } else if (THREAD->is_lock_owned((address)displaced_header))
     //   // Simple recursive case.
-    //   monitor->lock()->set_displaced_header(NULL);
+    //   monitor->lock()->set_displaced_header(nullptr);
     // } else {
     //   // Slow path.
     //   InterpreterRuntime::monitorenter(THREAD, monitor);
@@ -978,7 +993,7 @@ void InterpreterMacroAssembler::lock_object(Register monitor, Register object) {
 
     // } else if (THREAD->is_lock_owned((address)displaced_header))
     //   // Simple recursive case.
-    //   monitor->lock()->set_displaced_header(NULL);
+    //   monitor->lock()->set_displaced_header(nullptr);
 
     // We did not see an unlocked object so try the fast recursive case.
 
@@ -1028,12 +1043,12 @@ void InterpreterMacroAssembler::unlock_object(Register monitor) {
 
     // template code:
     //
-    // if ((displaced_header = monitor->displaced_header()) == NULL) {
-    //   // Recursive unlock. Mark the monitor unlocked by setting the object field to NULL.
-    //   monitor->set_obj(NULL);
+    // if ((displaced_header = monitor->displaced_header()) == nullptr) {
+    //   // Recursive unlock. Mark the monitor unlocked by setting the object field to null.
+    //   monitor->set_obj(nullptr);
     // } else if (Atomic::cmpxchg(obj->mark_addr(), monitor, displaced_header) == monitor) {
     //   // We swapped the unlocked mark in displaced_header into the object's mark word.
-    //   monitor->set_obj(NULL);
+    //   monitor->set_obj(nullptr);
     // } else {
     //   // Slow path.
     //   InterpreterRuntime::monitorexit(monitor);
@@ -1059,7 +1074,7 @@ void InterpreterMacroAssembler::unlock_object(Register monitor) {
 
     // } else if (Atomic::cmpxchg(obj->mark_addr(), monitor, displaced_header) == monitor) {
     //   // We swapped the unlocked mark in displaced_header into the object's mark word.
-    //   monitor->set_obj(NULL);
+    //   monitor->set_obj(nullptr);
 
     // If we still have a lightweight lock, unlock the object and be done.
 
@@ -1094,7 +1109,7 @@ void InterpreterMacroAssembler::unlock_object(Register monitor) {
     Label done;
     b(done); // Monitor register may be overwritten! Runtime has already freed the slot.
 
-    // Exchange worked, do monitor->set_obj(NULL);
+    // Exchange worked, do monitor->set_obj(nullptr);
     align(32, 12);
     bind(free_slot);
     li(R0, 0);
@@ -1129,7 +1144,6 @@ void InterpreterMacroAssembler::call_from_interpreter(Register Rtarget_method, R
     // compiled code in threads for which the event is enabled. Check here for
     // interp_only_mode if these events CAN be enabled.
     Label done;
-    verify_thread();
     cmpwi(CCR0, Rinterp_only, 0);
     beq(CCR0, done);
     ld(Rtarget_addr, in_bytes(Method::interpreter_entry_offset()), Rtarget_method);
@@ -1687,7 +1701,7 @@ void InterpreterMacroAssembler::record_klass_in_profile_helper(
   }
 
   // In the fall-through case, we found no matching receiver, but we
-  // observed the receiver[start_row] is NULL.
+  // observed the receiver[start_row] is null.
 
   // Fill in the receiver field and increment the count.
   int recvr_offset = in_bytes(VirtualCallData::receiver_offset(start_row));
@@ -2100,7 +2114,7 @@ void InterpreterMacroAssembler::check_and_forward_exception(Register Rscratch1, 
   li(Rtmp, 0);
   mr_if_needed(R3, Rexception);
   std(Rtmp, thread_(pending_exception)); // Clear exception in thread
-  if (Interpreter::rethrow_exception_entry() != NULL) {
+  if (Interpreter::rethrow_exception_entry() != nullptr) {
     // Already got entry address.
     load_dispatch_table(Rtmp, (address*)Interpreter::rethrow_exception_entry());
   } else {

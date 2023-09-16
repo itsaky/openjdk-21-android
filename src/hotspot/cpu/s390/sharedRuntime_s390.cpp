@@ -1547,8 +1547,6 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler *masm,
 
   wrapper_FrameDone = __ offset();
 
-  __ verify_thread();
-
   // Native nmethod wrappers never take possession of the oop arguments.
   // So the caller will gc the arguments.
   // The only thing we need an oopMap for is if the call is static.
@@ -1840,7 +1838,9 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler *masm,
     save_native_result(masm, ret_type, workspace_slot_offset); // Make Z_R2 available as work reg.
 
     // Force this write out before the read below.
-    __ z_fence();
+    if (!UseSystemMemoryBarrier) {
+      __ z_fence();
+    }
 
     __ safepoint_poll(sync, Z_R1);
 
@@ -1971,7 +1971,6 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler *masm,
   //--------------------------------------------------------------------
   // Clear "last Java frame" SP and PC.
   //--------------------------------------------------------------------
-  __ verify_thread(); // Z_thread must be correct.
 
   __ reset_last_Java_frame();
 
