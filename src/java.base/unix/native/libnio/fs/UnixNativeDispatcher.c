@@ -696,7 +696,7 @@ Java_sun_nio_fs_UnixNativeDispatcher_utimes0(JNIEnv* env, jclass this,
 {
     int err;
     struct timeval times[2];
-    struct timeval times2[2];
+    struct timespec times2[2];
     const char* path = (const char*)jlong_to_ptr(pathAddress);
 
     times[0].tv_sec = times2[0].tv_sec = accessTime / 1000000;
