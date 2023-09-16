@@ -348,7 +348,7 @@ bool os::Linux::get_tick_information(CPUPerfTicks* pticks, int which_logical_cpu
       #ifdef __amd64__
         #define SYS_gettid 186
       #elif defined(__arm64__) || defined(__aarch64__)
-+       #define SYS_gettid 178
+       #define SYS_gettid 178
       #else
         #ifdef __sparc__
           #define SYS_gettid 143
