@@ -23,6 +23,10 @@
  * questions.
  */
 
+#ifdef __ANDROID__
+#undef _GNU_SOURCE
+#endif
+
 #include <errno.h>
 #include <string.h>
 
