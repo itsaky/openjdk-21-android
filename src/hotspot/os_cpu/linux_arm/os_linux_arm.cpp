@@ -72,8 +72,12 @@
 # include <pwd.h>
 # include <poll.h>
 # include <ucontext.h>
-# include <fpu_control.h>
-# include <asm/ptrace.h>
+#ifndef __ANDROID__
+ #include <fpu_control.h>
+#else
+ #include "fpu_control.h" //include the local header
+#endif
+#include <asm/ptrace.h>
 
 #define SPELL_REG_SP  "sp"
 
@@ -90,8 +94,14 @@ enum {
 #endif
 
 address os::current_stack_pointer() {
+#if defined(__clang__) || defined(__llvm__)
+  void *sp;
+  __asm__("mov %0, " SPELL_REG_SP : "=r"(sp));
+  return (address) sp;
+#else
   register address sp __asm__ (SPELL_REG_SP);
   return sp;
+#endif
 }
 
 char* os::non_memory_address_word() {
@@ -415,8 +425,8 @@ void os::setup_fpu() {
 #if !defined(__SOFTFP__) && defined(__VFP_FP__)
   // Turn on IEEE-754 compliant VFP mode
   __asm__ volatile (
-    "mov %%r0, #0;"
-    "fmxr fpscr, %%r0"
+    "mov r0, #0;"
+    "fmxr fpscr, r0"
     : /* no output */ : /* no input */ : "r0"
   );
 #endif

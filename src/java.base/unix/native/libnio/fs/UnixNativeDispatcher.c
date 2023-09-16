@@ -140,6 +140,7 @@ typedef int fstatat64_func(int, const char *, struct stat64 *, int);
 typedef int unlinkat_func(int, const char*, int);
 typedef int renameat_func(int, const char*, int, const char*);
 typedef int futimesat_func(int, const char *, const struct timeval *);
+typedef int utimensat_func(int, const char *, const struct timespec *, int flags);
 typedef int futimens_func(int, const struct timespec *);
 typedef int lutimes_func(const char *, const struct timeval *);
 typedef DIR* fdopendir_func(int);
@@ -149,9 +150,45 @@ static fstatat64_func* my_fstatat64_func = NULL;
 static unlinkat_func* my_unlinkat_func = NULL;
 static renameat_func* my_renameat_func = NULL;
 static futimesat_func* my_futimesat_func = NULL;
+static utimensat_func* my_utimensat_func = NULL;
 static futimens_func* my_futimens_func = NULL;
 static lutimes_func* my_lutimes_func = NULL;
 static fdopendir_func* my_fdopendir_func = NULL;
+
+#ifdef __ANDROID__
+/*
+ * TODO: Android lacks support for the methods listed below.  In it's place are
+ * alternatives that use existing Android functionality, but lack reentrant
+ * support.  Determine if the following are the most suitable alternatives.
+ *
+ */
+int getgrgid_r(gid_t gid, struct group* grp, char* buf, size_t buflen, struct group** result) {
+
+  *result = NULL;
+  errno = 0;
+  grp = getgrgid(gid);
+  if (grp == NULL) {
+        return errno;
+  }
+  // buf not used by caller (see below)
+  *result = grp;
+  return 0;
+}
+
+int getgrnam_r(const char *name, struct group* grp, char* buf, size_t buflen, struct group** result) {
+
+  *result = NULL;
+  errno = 0;
+  grp = getgrnam(name);
+  if (grp == NULL) {
+        return errno;
+  }
+  // buf not used by caller (see below)
+  *result = grp;
+  return 0;
+
+}
+#endif
 
 /**
  * fstatat missing from glibc on Linux.
@@ -273,6 +310,9 @@ Java_sun_nio_fs_UnixNativeDispatcher_init(JNIEnv* env, jclass this)
     my_futimesat_func = (futimesat_func*) dlsym(RTLD_DEFAULT, "futimesat");
     my_lutimes_func = (lutimes_func*) dlsym(RTLD_DEFAULT, "lutimes");
 #endif
+#ifdef __ANDROID__
+    my_utimensat_func = (utimensat_func*) dlsym(RTLD_DEFAULT, "utimensat");
+#endif
     my_futimens_func = (futimens_func*) dlsym(RTLD_DEFAULT, "futimens");
 #if defined(_AIX)
     my_fdopendir_func = (fdopendir_func*) dlsym(RTLD_DEFAULT, "fdopendir64");
@@ -292,7 +332,7 @@ Java_sun_nio_fs_UnixNativeDispatcher_init(JNIEnv* env, jclass this)
     capabilities |= sun_nio_fs_UnixNativeDispatcher_SUPPORTS_FUTIMES;
     capabilities |= sun_nio_fs_UnixNativeDispatcher_SUPPORTS_LUTIMES;
 #else
-    if (my_futimesat_func != NULL)
+    if (my_futimesat_func != NULL || my_utimensat_func != NULL)
         capabilities |= sun_nio_fs_UnixNativeDispatcher_SUPPORTS_FUTIMES;
     if (my_lutimes_func != NULL)
         capabilities |= sun_nio_fs_UnixNativeDispatcher_SUPPORTS_LUTIMES;
@@ -304,7 +344,7 @@ Java_sun_nio_fs_UnixNativeDispatcher_init(JNIEnv* env, jclass this)
 
     if (my_openat64_func != NULL &&  my_fstatat64_func != NULL &&
         my_unlinkat_func != NULL && my_renameat_func != NULL &&
-        my_futimesat_func != NULL && my_fdopendir_func != NULL)
+        (my_futimesat_func != NULL || my_utimensat_func != NULL) && my_fdopendir_func != NULL)
     {
         capabilities |= sun_nio_fs_UnixNativeDispatcher_SUPPORTS_OPENAT;
     }
@@ -656,13 +696,17 @@ Java_sun_nio_fs_UnixNativeDispatcher_utimes0(JNIEnv* env, jclass this,
 {
     int err;
     struct timeval times[2];
+    struct timeval times2[2];
     const char* path = (const char*)jlong_to_ptr(pathAddress);
 
-    times[0].tv_sec = accessTime / 1000000;
+    times[0].tv_sec = times2[0].tv_sec = accessTime / 1000000;
     times[0].tv_usec = accessTime % 1000000;
 
-    times[1].tv_sec = modificationTime / 1000000;
+    times[1].tv_sec = times2[1].tv_sec = modificationTime / 1000000;
     times[1].tv_usec = modificationTime % 1000000;
+
+    times2[0].tv_nsec = times[0].tv_usec * 1000;
+    times2[1].tv_nsec = times[1].tv_usec * 1000;
 
     RESTARTABLE(utimes(path, &times[0]), err);
     if (err == -1) {
@@ -686,11 +730,15 @@ Java_sun_nio_fs_UnixNativeDispatcher_futimes0(JNIEnv* env, jclass this, jint fil
 #ifdef _ALLBSD_SOURCE
     RESTARTABLE(futimes(filedes, &times[0]), err);
 #else
-    if (my_futimesat_func == NULL) {
-        JNU_ThrowInternalError(env, "my_futimesat_func is NULL");
+    if (my_futimesat_func == NULL && my_utimensat_func == NULL) {
+        JNU_ThrowInternalError(env, "my_futimesat_func and my_utimensat_func are NULL");
         return;
     }
-    RESTARTABLE((*my_futimesat_func)(filedes, NULL, &times[0]), err);
+    if (my_futimesat_func != NULL) {
+        RESTARTABLE((*my_futimesat_func)(filedes, NULL, &times[0]), err);
+    } else {
+        RESTARTABLE((*my_utimensat_func)(filedes, NULL, &times2[0], 0), err);
+    }
 #endif
     if (err == -1) {
         throwUnixException(env, errno);

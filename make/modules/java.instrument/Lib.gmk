@@ -36,9 +36,11 @@ endif
 $(eval $(call SetupJdkLibrary, BUILD_LIBINSTRUMENT, \
     NAME := instrument, \
     OPTIMIZATION := LOW, \
+    EXTRA_SRC := java.base:libtinyiconv, \
     CFLAGS := $(CFLAGS_JDKLIB) $(LIBINSTRUMENT_CFLAGS), \
     CFLAGS_debug := -DJPLIS_LOGGING, \
     CFLAGS_release := -DNO_JPLIS_LOGGING, \
+    CXXFLAGS := $(CXXFLAGS_JDKLIB), \
     EXTRA_HEADER_DIRS := java.base:libjli, \
     LDFLAGS := $(LDFLAGS_JDKLIB) \
         $(call SET_SHARED_LIBRARY_ORIGIN) \
