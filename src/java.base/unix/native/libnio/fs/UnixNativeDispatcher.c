@@ -696,17 +696,13 @@ Java_sun_nio_fs_UnixNativeDispatcher_utimes0(JNIEnv* env, jclass this,
 {
     int err;
     struct timeval times[2];
-    struct timespec times2[2];
     const char* path = (const char*)jlong_to_ptr(pathAddress);
 
-    times[0].tv_sec = times2[0].tv_sec = accessTime / 1000000;
+    times[0].tv_sec = accessTime / 1000000;
     times[0].tv_usec = accessTime % 1000000;
 
-    times[1].tv_sec = times2[1].tv_sec = modificationTime / 1000000;
+    times[1].tv_sec = modificationTime / 1000000;
     times[1].tv_usec = modificationTime % 1000000;
-
-    times2[0].tv_nsec = times[0].tv_usec * 1000;
-    times2[1].tv_nsec = times[1].tv_usec * 1000;
 
     RESTARTABLE(utimes(path, &times[0]), err);
     if (err == -1) {
@@ -719,13 +715,17 @@ Java_sun_nio_fs_UnixNativeDispatcher_futimes0(JNIEnv* env, jclass this, jint fil
     jlong accessTime, jlong modificationTime)
 {
     struct timeval times[2];
+    struct timespec times2[2];
     int err = 0;
 
-    times[0].tv_sec = accessTime / 1000000;
+    times[0].tv_sec = times2[0].tv_sec = accessTime / 1000000;
     times[0].tv_usec = accessTime % 1000000;
 
-    times[1].tv_sec = modificationTime / 1000000;
+    times[1].tv_sec = times2[1].tv_sec = modificationTime / 1000000;
     times[1].tv_usec = modificationTime % 1000000;
+
+    times2[0].tv_nsec = times[0].tv_usec * 1000;
+    times2[1].tv_nsec = times[1].tv_usec * 1000;
 
 #ifdef _ALLBSD_SOURCE
     RESTARTABLE(futimes(filedes, &times[0]), err);
