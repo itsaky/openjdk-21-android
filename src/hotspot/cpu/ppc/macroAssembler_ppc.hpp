@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2002, 2023, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012, 2021 SAP SE. All rights reserved.
+ * Copyright (c) 2012, 2023 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -316,7 +316,7 @@ class MacroAssembler: public Assembler {
   // Push a frame of size `bytes'. No abi space provided.
   void push_frame(unsigned int bytes, Register tmp);
 
-  // Push a frame of size `bytes' plus abi_reg_args on top.
+  // Push a frame of size `bytes' plus native_abi_reg_args on top.
   void push_frame_reg_args(unsigned int bytes, Register tmp);
 
   // Setup up a new C frame with a spill area for non-volatile GPRs and additional
@@ -606,6 +606,9 @@ class MacroAssembler: public Assembler {
   void pop_cont_fastpath();
   void inc_held_monitor_count(Register tmp);
   void dec_held_monitor_count(Register tmp);
+  void atomically_flip_locked_state(bool is_unlock, Register obj, Register tmp, Label& failed, int semantics);
+  void fast_lock(Register obj, Register hdr, Register t1, Label& slow);
+  void fast_unlock(Register obj, Register hdr, Label& slow);
 
   // allocation (for C1)
   void tlab_allocate(
@@ -732,7 +735,7 @@ class MacroAssembler: public Assembler {
 
   // Load/Store klass oop from klass field. Compress.
   void load_klass(Register dst, Register src);
-  void load_klass_check_null(Register dst, Register src, Label* is_null = NULL);
+  void load_klass_check_null(Register dst, Register src, Label* is_null = nullptr);
   void store_klass(Register dst_oop, Register klass, Register tmp = R0);
   void store_klass_gap(Register dst_oop, Register val = noreg); // Will store 0 if val not specified.
 

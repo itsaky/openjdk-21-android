@@ -37,9 +37,9 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.StructureViolationException;
 import java.util.concurrent.locks.LockSupport;
 import jdk.internal.event.ThreadSleepEvent;
-import jdk.internal.misc.StructureViolationExceptions;
 import jdk.internal.misc.TerminatingThreadLocal;
 import jdk.internal.misc.Unsafe;
 import jdk.internal.misc.VM;
@@ -321,7 +321,7 @@ public class Thread implements Runnable {
             // bindings established for running/calling an operation
             Object bindings = snapshot.scopedValueBindings();
             if (currentThread().scopedValueBindings != bindings) {
-                StructureViolationExceptions.throwException("Scoped value bindings have changed");
+                throw new StructureViolationException("Scoped value bindings have changed");
             }
 
             this.scopedValueBindings = bindings;
@@ -506,14 +506,14 @@ public class Thread implements Runnable {
             if (currentThread() instanceof VirtualThread vthread) {
                 vthread.sleepNanos(nanos);
             } else {
-                sleep0(millis);
+                sleep0(nanos);
             }
         } finally {
             afterSleep(event);
         }
     }
 
-    private static native void sleep0(long millis) throws InterruptedException;
+    private static native void sleep0(long nanos) throws InterruptedException;
 
     /**
      * Causes the currently executing thread to sleep (temporarily cease
@@ -555,11 +555,7 @@ public class Thread implements Runnable {
             if (currentThread() instanceof VirtualThread vthread) {
                 vthread.sleepNanos(totalNanos);
             } else {
-                // millisecond precision
-                if (nanos > 0 && millis < Long.MAX_VALUE) {
-                    millis++;
-                }
-                sleep0(millis);
+                sleep0(totalNanos);
             }
         } finally {
             afterSleep(event);
@@ -593,12 +589,7 @@ public class Thread implements Runnable {
             if (currentThread() instanceof VirtualThread vthread) {
                 vthread.sleepNanos(nanos);
             } else {
-                // millisecond precision
-                long millis = NANOSECONDS.toMillis(nanos);
-                if (nanos > MILLISECONDS.toNanos(millis)) {
-                    millis += 1L;
-                }
-                sleep0(millis);
+                sleep0(nanos);
             }
         } finally {
             afterSleep(event);
@@ -1711,7 +1702,7 @@ public class Thread implements Runnable {
      *
      * @implNote In the JDK Reference Implementation, interruption of a thread
      * that is not alive still records that the interrupt request was made and
-     * will report it via {@link #interrupted} and {@link #isInterrupted()}.
+     * will report it via {@link #interrupted()} and {@link #isInterrupted()}.
      *
      * @throws  SecurityException
      *          if the current thread cannot modify this thread
