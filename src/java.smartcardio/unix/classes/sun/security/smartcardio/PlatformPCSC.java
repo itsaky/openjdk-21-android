@@ -46,8 +46,8 @@ class PlatformPCSC {
 
     private static final String PROP_NAME = "sun.security.smartcardio.library";
 
-    private static final String LIB1 = "/usr/$LIBISA/libpcsclite.so";
-    private static final String LIB2 = "/usr/local/$LIBISA/libpcsclite.so";
+    private static final String LIB1 = "@TERMUX_PREFIX@/$LIBISA/libpcsclite.so";
+    private static final String LIB2 = "@TERMUX_PREFIX@/local/$LIBISA/libpcsclite.so";
     private static final String PCSC_FRAMEWORK = "/System/Library/Frameworks/PCSC.framework/Versions/Current/PCSC";
 
     PlatformPCSC() {

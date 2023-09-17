@@ -62,7 +62,7 @@ public final class ResolverConfigurationImpl
     {
         ArrayList<String> ll = new ArrayList<>();
 
-        String resolvPath = System.getProperty("ext.net.resolvPath", "/etc/resolv.conf");
+        String resolvPath = System.getProperty("ext.net.resolvPath", "@TERMUX_PREFIX@/etc/resolv.conf");
 
         try {
             BufferedReader in =

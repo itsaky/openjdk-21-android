@@ -66,25 +66,24 @@ extern Display *awt_display;
  * various flavors of Linux
  */
 static char *fullLinuxFontPath[] = {
-    "/usr/X11R6/lib/X11/fonts/TrueType",  /* RH 7.1+ */
-    "/usr/X11R6/lib/X11/fonts/truetype",  /* SuSE */
-    "/usr/X11R6/lib/X11/fonts/tt",
-    "/usr/X11R6/lib/X11/fonts/TTF",
-    "/usr/X11R6/lib/X11/fonts/OTF",       /* RH 9.0 (but empty!) */
-    "/usr/share/fonts/ja/TrueType",       /* RH 7.2+ */
-    "/usr/share/fonts/truetype",
-    "/usr/share/fonts/ko/TrueType",       /* RH 9.0 */
-    "/usr/share/fonts/zh_CN/TrueType",    /* RH 9.0 */
-    "/usr/share/fonts/zh_TW/TrueType",    /* RH 9.0 */
-    "/var/lib/defoma/x-ttcidfont-conf.d/dirs/TrueType", /* Debian */
-    "/usr/X11R6/lib/X11/fonts/Type1",
-    "/usr/share/fonts/default/Type1",     /* RH 9.0 */
+    "@TERMUX_PREFIX@/share/fonts/TrueType",
+    "@TERMUX_PREFIX@/share/fonts/truetype",
+    "@TERMUX_PREFIX@/share/fonts/tt",
+    "@TERMUX_PREFIX@/share/fonts/TTF",
+    "@TERMUX_PREFIX@/share/fonts/OTF",
+    "@TERMUX_PREFIX@/share/fonts/ja/TrueType",
+    "@TERMUX_PREFIX@/share/fonts/ko/TrueType",
+    "@TERMUX_PREFIX@/share/fonts/zh_CN/TrueType",
+    "@TERMUX_PREFIX@/share/fonts/zh_TW/TrueType",
+    "@TERMUX_PREFIX@/share/fonts/Type1",
+    "@TERMUX_PREFIX@/share/fonts/default/Type1",
+    "/system/fonts",
     NULL, /* terminates the list */
 };
 #elif defined(_AIX)
 static char *fullAixFontPath[] = {
-    "/usr/lpp/X11/lib/X11/fonts/Type1",    /* from X11.fnt.iso_T1  */
-    "/usr/lpp/X11/lib/X11/fonts/TrueType", /* from X11.fnt.ucs.ttf */
+    "@TERMUX_PREFIX@/lpp/X11/lib/X11/fonts/Type1",    /* from X11.fnt.iso_T1  */
+    "@TERMUX_PREFIX@/lpp/X11/lib/X11/fonts/TrueType", /* from X11.fnt.ucs.ttf */
     NULL, /* terminates the list */
 };
 #endif

@@ -477,17 +477,17 @@ void os::init_system_properties_values() {
   //        7: The default directories, normally /lib and /usr/lib.
 #ifndef OVERRIDE_LIBPATH
   #if defined(_LP64)
-    #define DEFAULT_LIBPATH "/usr/lib64:/lib64:/lib:/usr/lib"
+    #define DEFAULT_LIBPATH "@TERMUX_PREFIX@/lib"
   #else
-    #define DEFAULT_LIBPATH "/lib:/usr/lib"
+    #define DEFAULT_LIBPATH "@TERMUX_PREFIX@/lib"
   #endif
 #else
   #define DEFAULT_LIBPATH OVERRIDE_LIBPATH
 #endif
 
 // Base path of extensions installed on the system.
-#define SYS_EXT_DIR     "/usr/java/packages"
-#define EXTENSIONS_DIR  "/lib/ext"
+#define SYS_EXT_DIR     "@TERMUX_PREFIX@/java/packages"
+#define EXTENSIONS_DIR  "@TERMUX_PREFIX@/lib/ext"
 
   // Buffer that fits several snprintfs.
   // Note that the space for the colon and the trailing null are provided
@@ -2255,7 +2255,7 @@ void os::Linux::print_process_memory_info(outputStream* st) {
 }
 
 bool os::Linux::print_ld_preload_file(outputStream* st) {
-  return _print_ascii_file("/etc/ld.so.preload", st, nullptr, "/etc/ld.so.preload:");
+  return _print_ascii_file("@TERMUX_PREFIX@/etc/ld.so.preload", st, nullptr, "@TERMUX_PREFIX@/etc/ld.so.preload:");
 }
 
 void os::Linux::print_uptime_info(outputStream* st) {
